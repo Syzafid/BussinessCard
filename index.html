@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>AR Card – Syafrizal Amri Fajar</title>
+  <meta name="description"
+    content="AR Business Card interaktif milik Syafrizal Amri Fajar. Arahkan kamera ke kartu nama untuk melihat profil AR.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.0/dist/aframe-extras.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #000;
+      overflow: hidden;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(145deg, #0f0f1a 0%, #1a0a1a 50%, #0a0f1a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity 0.6s ease;
+    }
+
+    #splash.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-logo {
+      width: 88px;
+      height: 88px;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      animation: pulse-ring 2s ease-in-out infinite;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(4px);
+    }
+
+    @keyframes pulse-ring {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2);
+      }
+
+      50% {
+        box-shadow: 0 0 0 18px rgba(255, 255, 255, 0);
+      }
+    }
+
+    .splash-name {
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .splash-title {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 13px;
+      letter-spacing: 1.5px;
+    }
+
+    .splash-divider {
+      width: 48px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .splash-instruction {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 14px;
+      text-align: center;
+      max-width: 260px;
+      line-height: 1.7;
+    }
+
+    .splash-btn {
+      margin-top: 8px;
+      padding: 14px 36px;
+      background: #fff;
+      color: #111;
+      border: none;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .splash-btn:active {
+      transform: scale(0.96);
+    }
+
+    .splash-btn:hover {
+      background: #f0f0f0;
+    }
+
+    #hud {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.55);
+      color: rgba(255, 255, 255, 0.75);
+      padding: 7px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+      display: none;
+      z-index: 800;
+    }
+
+    #marker-status {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(6px);
+      z-index: 900;
+      display: none;
+      transition: border-color 0.3s, color 0.3s;
+    }
+
+    #marker-status.found {
+      color: #6fff6f;
+      border-color: #6fff6f;
+    }
+
+    #marker-status.lost {
+      color: #ff6b6b;
+      border-color: #ff6b6b;
+    }
+
+    #no-marker {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 14px;
+      padding: 20px 28px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.7;
+      pointer-events: none;
+      display: none;
+      backdrop-filter: blur(8px);
+      z-index: 850;
+    }
+
+    [data-aframe-cursor-loading] {
+      animation: none;
+    }
+
+    .a-cursor {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="splash">
+    <div class="splash-logo">✦</div>
+    <div class="splash-name">Syafrizal Amri Fajar</div>
+    <div class="splash-title">Software Developer · syzaf.dev</div>
+    <div class="splash-divider"></div>
+    <div class="splash-instruction">
+      Arahkan kamera ke kartu nama.<br />
+      Ketuk tombol AR untuk berinteraksi.
+    </div>
+    <button class="splash-btn" id="start-btn">📷 Mulai AR</button>
+  </div>
+
+  <div id="hud">📷 Arahkan ke kartu · Ketuk tombol untuk aksi</div>
+
+  <div id="no-marker">
+    🔍 Marker belum terdeteksi.<br />
+    Pastikan <strong>kartu nama</strong> terlihat<br />
+    dan pencahayaan cukup.
+  </div>
+
+  <div id="marker-status" class="lost">🔴 Mencari Marker...</div>
+
+  <a-scene id="ar-scene" embedded arjs="sourceType: webcam;
+          sourceWidth: 640;
+          sourceHeight: 480;
+          displayWidth: 640;
+          displayHeight: 480;
+          debugUIEnabled: false;
+          detectionMode: mono;
+          patternRatio: 0.90;" renderer="logarithmicDepthBuffer: false; antialias: true; alpha: true;"
+    vr-mode-ui="enabled: false" style="display:none">
+
+    <a-assets timeout="8000">
+      <img id="web-preview" src="assets/website.png" crossorigin="anonymous" />
+      <img id="profile-img" src="assets/fotoProfil.png" crossorigin="anonymous" />
+      <img id="icon-wa" src="assets/whatsapp.png" crossorigin="anonymous" />
+      <img id="icon-li" src="assets/linkedin.png" crossorigin="anonymous" />
+      <img id="icon-gh" src="assets/github.png" crossorigin="anonymous" />
+      <img id="icon-email" src="assets/email.png" crossorigin="anonymous" />
+      <a-asset-item id="owl-model" src="assets/owl.glb"></a-asset-item>
+    </a-assets>
+
+    <a-marker id="main-marker" type="pattern" url="marker.patt" emitevents="true" smooth="true" smoothCount="5"
+      smoothTolerance="0.01" smoothThreshold="2">
+
+      <a-gltf-model id="owl-3d" src="#owl-model" position="1.80 0.5 -2" scale="0 0 0" rotation="-90 0 0"
+        data-final-scale="1 1 1" animation-mixer="clip: Animation; loop: repeat; crossFadeDuration: 0.3;">
+      </a-gltf-model>
+
+      <a-circle id="profile-ring" radius="0.38" color="#ffffff" opacity="1" position="1.80 0.02 -0.05"
+        rotation="-90 0 0" material="depthWrite: false;" scale="1 1 1" data-final-scale="2 2 2">
+      </a-circle>
+
+      <a-circle id="profile-photo" src="#profile-img" radius="0.34" opacity="1" position="1.80 0.04 -0.05"
+        rotation="-90 0 0" scale="1 1 1" data-final-scale="2 2 2">
+      </a-circle>
+
+      <a-text id="name-text" value="Syafrizal\nAmri Fajar" position="2.8 0.05 -0.30" align="left" color="#ffffff"
+        scale="0 0 0" width="3.0" font="https://cdn.aframe.io/fonts/Roboto-msdf.json" rotation="-90 0 0"
+        data-final-scale="1 1 1">
+      </a-text>
+
+      <a-text id="subtitle-text" value="Software Developer" position="2.8 0.05 0.12" align="left"
+        color="rgba(200,200,200,1)" scale="0 0 0" width="5.0" font="https://cdn.aframe.io/fonts/Roboto-msdf.json"
+        rotation="-90 0 0" data-final-scale="0.75 0.75 0.75">
+      </a-text>
+
+      <a-entity id="btn-website" class="clickable" position="1.80 0.04 1.4" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-plane width="1.3" height="0.26" color="#ffffff" opacity="0.97" position="0 0 0" class="clickable">
+        </a-plane>
+      </a-entity>
+      <a-text id="label-website" value="Website" align="center" color="#111111" position="1.80 0.08 1.4" scale="1 1 1"
+        width="2" font="https://cdn.aframe.io/fonts/Roboto-msdf.json" rotation="-90 0 0" data-final-scale="1 1 1">
+      </a-text>
+
+      <a-entity id="btn-instagram" class="clickable" position="3.4 0.04 1.4" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-plane width="1.3" height="0.26" color="#E1306C" opacity="0.97" position="0 0 0" class="clickable">
+        </a-plane>
+      </a-entity>
+      <a-text id="label-instagram" value="Instagram" align="center" color="#ffffff" position="3.4 0.08 1.4"
+        scale="1 1 1" width="2" font="https://cdn.aframe.io/fonts/Roboto-msdf.json" rotation="-90 0 0"
+        data-final-scale="1 1 1">
+      </a-text>
+
+      <a-plane id="web-panel" src="#web-preview" position="-0.88 0.15 2" width="2.44" height="1.50" rotation="-90 0 0"
+        material="transparent: false; opacity: 1;" scale="0 0 0" data-final-scale="1 1 1">
+      </a-plane>
+
+      <a-entity id="btn-whatsapp" class="clickable" position="1.4 0.04 2.40" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-circle radius="0.24" color="#25D366" opacity="1" position="0 0 0" class="clickable"
+          material="depthWrite: false;">
+        </a-circle>
+        <a-plane src="#icon-wa" width="0.30" height="0.30" position="0 0 0.05"
+          material="transparent: true; alphaTest: 0.1;">
+        </a-plane>
+      </a-entity>
+
+      <a-entity id="btn-linkedin" class="clickable" position="2.15 0.04 2.40" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-circle radius="0.24" color="#0077B5" opacity="1" position="0 0 0" class="clickable"
+          material="depthWrite: false;">
+        </a-circle>
+        <a-plane src="#icon-li" width="0.30" height="0.30" position="0 0 0.05"
+          material="transparent: true; alphaTest: 0.1;">
+        </a-plane>
+      </a-entity>
+
+      <a-entity id="btn-github" class="clickable" position="2.9 0.04 2.40" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-circle radius="0.24" color="#ffffff" opacity="1" position="0 0 0" class="clickable"
+          material="depthWrite: false;">
+        </a-circle>
+        <a-plane src="#icon-gh" width="0.30" height="0.30" position="0 0 0.05"
+          material="transparent: true; alphaTest: 0.1;">
+        </a-plane>
+      </a-entity>
+
+      <a-entity id="btn-email" class="clickable" position="3.65 0.04 2.40" rotation="-90 0 0" scale="0 0 0"
+        data-final-scale="1 1 1">
+        <a-circle radius="0.24" color="#EA4335" opacity="1" position="0 0 0" class="clickable"
+          material="depthWrite: false;">
+        </a-circle>
+        <a-plane src="#icon-email" width="0.30" height="0.30" position="0 0 0.05"
+          material="transparent: true; alphaTest: 0.1;">
+        </a-plane>
+      </a-entity>
+
+    </a-marker>
+
+    <a-entity camera>
+      <a-entity id="gaze-cursor" cursor="fuse: true; fuseTimeout: 1500" raycaster="far: 20; objects: .clickable"
+        position="0 0 -1" geometry="primitive: ring; radiusInner: 0.002; radiusOuter: 0.010"
+        material="color: #ffffff; shader: flat; opacity: 0.85"
+        animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 2.2 2.2 2.2"
+        animation__unfusing="property: scale; startEvents: mouseleave; easing: easeOutCubic; dur: 200; to: 1 1 1">
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    const BUTTON_LINKS = {
+      'btn-website': 'https://syzaf.dev',
+      'btn-instagram': 'https://instagram.com/syzaf.id',
+      'btn-whatsapp': 'https://wa.me/6285767973635',
+      'btn-linkedin': 'https://linkedin.com/in/syafrizal-amri-fajar-a839b127a/',
+      'btn-github': 'https://github.com/syzafid',
+      'btn-email': 'mailto:syafrizalaf93@gmail.com',
+    };
+
+    const REVEAL_SEQUENCE = [
+      { id: 'profile-ring', delay: 100, dur: 600, easing: 'easeOutElastic' },
+      { id: 'profile-photo', delay: 200, dur: 600, easing: 'easeOutElastic' },
+      { id: 'owl-3d', delay: 350, dur: 900, easing: 'easeOutElastic' },
+      { id: 'name-text', delay: 550, dur: 500, easing: 'easeOutBack' },
+      { id: 'subtitle-text', delay: 700, dur: 500, easing: 'easeOutBack' },
+      { id: 'btn-website', delay: 850, dur: 500, easing: 'easeOutBack' },
+      { id: 'label-website', delay: 850, dur: 500, easing: 'easeOutBack' },
+      { id: 'btn-instagram', delay: 1000, dur: 500, easing: 'easeOutBack' },
+      { id: 'label-instagram', delay: 1000, dur: 500, easing: 'easeOutBack' },
+      { id: 'web-panel', delay: 1150, dur: 700, easing: 'easeOutBack' },
+      { id: 'btn-whatsapp', delay: 1350, dur: 450, easing: 'easeOutElastic' },
+      { id: 'btn-linkedin', delay: 1500, dur: 450, easing: 'easeOutElastic' },
+      { id: 'btn-github', delay: 1650, dur: 450, easing: 'easeOutElastic' },
+      { id: 'btn-email', delay: 1800, dur: 450, easing: 'easeOutElastic' },
+    ];
+
+    function hideAllElements() {
+      REVEAL_SEQUENCE.forEach(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.removeAttribute('animation__reveal');
+        el.removeAttribute('animation__float');
+        el.setAttribute('scale', '0 0 0');
+      });
+    }
+
+    function runRevealSequence() {
+      REVEAL_SEQUENCE.forEach(({ id, delay, dur, easing }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        const finalScale = el.getAttribute('data-final-scale') || '1 1 1';
+
+        setTimeout(() => {
+          el.setAttribute('animation__reveal',
+            `property: scale; from: 0 0 0; to: ${finalScale}; dur: ${dur}; easing: ${easing};`
+          );
+
+          if (['owl-3d', 'profile-photo', 'profile-ring', 'web-panel'].includes(id)) {
+            setTimeout(() => startIdleFloat(el, id), dur + 100);
+          }
+        }, delay);
+      });
+    }
+
+    function startIdleFloat(el, id) {
+      const floatConfig = {
+        'owl-3d': { amp: 0.08, dur: 2200, phase: 0 },
+        'profile-photo': { amp: 0.04, dur: 2600, phase: 300 },
+        'profile-ring': { amp: 0.04, dur: 2600, phase: 300 },
+        'web-panel': { amp: 0.03, dur: 3000, phase: 600 },
+      };
+
+      const cfg = floatConfig[id];
+      if (!cfg) return;
+
+      const base = el.getAttribute('position');
+      if (!base) return;
+      const baseY = parseFloat(base.y || (typeof base === 'string' ? base.split(' ')[1] : 0));
+      const hiY = baseY + cfg.amp;
+      const loY = baseY - cfg.amp;
+
+      function animFloat(goUp) {
+        el.setAttribute('animation__float',
+          `property: position; to: ${base.x || base.split(' ')[0]} ${goUp ? hiY : loY} ${base.z || base.split(' ')[2]};
+           dur: ${cfg.dur}; easing: easeInOutSine; loop: false;`
+        );
+        setTimeout(() => animFloat(!goUp), cfg.dur + 10);
+      }
+
+      setTimeout(() => animFloat(true), cfg.phase);
+    }
+
+    const splash = document.getElementById('splash');
+    const startBtn = document.getElementById('start-btn');
+    const arScene = document.getElementById('ar-scene');
+    const hud = document.getElementById('hud');
+    const noMarker = document.getElementById('no-marker');
+    const markerStatus = document.getElementById('marker-status');
+
+    startBtn.addEventListener('click', () => {
+      splash.classList.add('hide');
+      setTimeout(() => {
+        splash.style.display = 'none';
+        arScene.style.display = '';
+        hud.style.display = 'block';
+        markerStatus.style.display = 'block';
+        startNoMarkerTimer();
+      }, 650);
+    });
+
+    function attachGazeListeners() {
+      Object.keys(BUTTON_LINKS).forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.addEventListener('click', () => {
+          const url = BUTTON_LINKS[id];
+          if (url.startsWith('mailto:') || url.startsWith('tel:')) {
+            window.location.href = url;
+          } else {
+            window.open(url, '_blank');
+          }
+        });
+
+        el.addEventListener('mouseenter', () => {
+          const fs = el.getAttribute('data-final-scale') || '1 1 1';
+          const parts = fs.split(' ').map(v => (parseFloat(v) * 1.10).toFixed(2));
+          el.setAttribute('scale', parts.join(' '));
+        });
+
+        el.addEventListener('mouseleave', () => {
+          const fs = el.getAttribute('data-final-scale') || '1 1 1';
+          el.setAttribute('scale', fs);
+        });
+
+        el.addEventListener('fusing', () => {
+          const fs = el.getAttribute('data-final-scale') || '1 1 1';
+          const parts = fs.split(' ').map(v => (parseFloat(v) * 1.10).toFixed(2));
+          const to = fs.split(' ').map(v => (parseFloat(v) * 1.20).toFixed(2));
+          el.setAttribute('animation__gaze_pulse',
+            `property: scale; from: ${parts.join(' ')}; to: ${to.join(' ')}; dur: 1500; easing: easeInOutSine;`
+          );
+        });
+      });
+    }
+
+    function waitForSceneAndAttach() {
+      const scene = document.getElementById('ar-scene');
+      if (!scene) { setTimeout(waitForSceneAndAttach, 100); return; }
+      if (scene.hasLoaded) {
+        attachGazeListeners();
+      } else {
+        scene.addEventListener('loaded', attachGazeListeners, { once: true });
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', waitForSceneAndAttach);
+    } else {
+      waitForSceneAndAttach();
+    }
+
+    let revealDone = false;
+    function attachMarkerListeners() {
+      const marker = document.getElementById('main-marker');
+      if (!marker) { setTimeout(attachMarkerListeners, 200); return; }
+
+      marker.addEventListener('markerFound', () => {
+        noMarker.style.display = 'none';
+        clearTimeout(noMarkerTimer);
+        markerStatus.className = 'found';
+        markerStatus.innerHTML = '🟢 Marker Ditemukan!';
+
+        runRevealSequence();
+        revealDone = true;
+      });
+
+      marker.addEventListener('markerLost', () => {
+        markerStatus.className = 'lost';
+        markerStatus.innerHTML = '🔴 Mencari Marker...';
+
+        hideAllElements();
+        revealDone = false;
+      });
+    }
+    attachMarkerListeners();
+
+    let noMarkerTimer;
+    function startNoMarkerTimer() {
+      noMarkerTimer = setTimeout(() => {
+        noMarker.style.display = 'block';
+      }, 5000);
+    }
+  </script>
+
+</body>
+
+</html>
