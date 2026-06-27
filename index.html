@@ -60,6 +60,12 @@
       backdrop-filter: blur(4px);
     }
 
+    .splash-logo img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+    }
+
     @keyframes pulse-ring {
 
       0%,
@@ -202,7 +208,9 @@
 <body>
 
   <div id="splash">
-    <div class="splash-logo">✦</div>
+    <div class="splash-logo">
+      <img src="assets/logonobg.png" alt="Logo" />
+    </div>
     <div class="splash-name">Syafrizal Amri Fajar</div>
     <div class="splash-title">Software Developer · syzaf.dev</div>
     <div class="splash-divider"></div>
@@ -210,7 +218,7 @@
       Arahkan kamera ke kartu nama.<br />
       Ketuk tombol AR untuk berinteraksi.
     </div>
-    <button class="splash-btn" id="start-btn">📷 Mulai AR</button>
+    <button class="splash-btn" id="start-btn">Mulai AR</button>
   </div>
 
   <div id="hud">📷 Arahkan ke kartu · Ketuk tombol untuk aksi</div>
